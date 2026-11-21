@@ -1,0 +1,21 @@
+trade_corridor,origin_state,destination_state,delivered_orders_n,on_time_delivery_rate_pct,avg_carrier_transit_days,avg_merchant_handling_days,avg_distance_km,sample_size_status
+SP -> SP,SP,SP,30381,95.38,4.76,2.82,151.0,interpretable
+SP -> RJ,SP,RJ,8094,86.38,12.65,3.15,442.0,interpretable
+SP -> MG,SP,MG,7368,94.96,9.02,2.92,496.0,interpretable
+SP -> RS,SP,RS,3550,93.56,12.8,2.82,908.0,interpretable
+SP -> PR,SP,PR,3073,95.6,9.42,2.98,464.0,interpretable
+PR -> SP,PR,SP,2919,96.81,7.56,3.21,471.0,interpretable
+MG -> SP,MG,SP,2540,96.6,7.66,2.9,417.0,interpretable
+SP -> SC,SP,SC,2300,90.57,12.54,2.95,564.0,interpretable
+SP -> BA,SP,BA,2285,87.24,16.34,2.95,1392.0,interpretable
+MG -> MG,MG,MG,1502,97.66,5.57,2.77,258.0,interpretable
+SP -> ES,SP,ES,1451,87.79,12.35,2.97,788.0,interpretable
+SP -> GO,SP,GO,1400,92.95,12.58,2.68,745.0,interpretable
+SP -> DF,SP,DF,1362,93.36,9.97,2.9,805.0,interpretable
+RJ -> SP,RJ,SP,1322,92.63,8.87,2.52,401.0,interpretable
+SC -> SP,SC,SP,1307,96.45,8.94,2.67,512.0,interpretable
+MG -> RJ,MG,RJ,1137,91.95,10.95,2.75,370.0,interpretable
+SP -> PE,SP,PE,1118,90.64,15.46,2.87,2050.0,interpretable
+PR -> RJ,PR,RJ,968,88.74,13.55,3.11,840.0,interpretable
+SP -> CE,SP,CE,953,86.09,17.67,2.99,2257.0,interpretable
+RJ -> RJ,RJ,RJ,946,95.39,3.72,2.55,54.0,interpretable

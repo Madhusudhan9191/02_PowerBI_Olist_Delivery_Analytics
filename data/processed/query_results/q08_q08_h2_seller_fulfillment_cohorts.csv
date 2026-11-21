@@ -1,0 +1,5 @@
+seller_tier,distinct_sellers_count,delivered_orders_n,on_time_delivery_rate_pct,avg_seller_handling_days,late_dispatch_rate_pct,avg_review_score,sample_size_status
+Tier 1: High Volume (500+ orders),26,23759,93.09,3.05,8.07,4.02,interpretable
+Tier 2: Mid Volume (100-499 orders),184,34156,93.48,2.71,9.31,4.08,interpretable
+Tier 3: Low Volume (30-99 orders),424,22448,93.34,2.91,9.86,4.11,interpretable
+Tier 4: Micro Volume (<30 orders),2325,15563,93.38,3.04,11.07,4.13,interpretable

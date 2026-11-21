@@ -1,0 +1,3 @@
+delivery_cohort,reviewed_orders_n,avg_review_score,count_1_2_star,pct_1_2_star,count_3_star,pct_3_star,count_4_star,pct_4_star,count_5_star,pct_5_star,sample_size_status
+Late Delivery,6381,2.27,3983,62.42,694,10.88,649,10.17,1055,16.53,interpretable
+On-Time Delivery,89443,4.29,8289,9.27,7222,8.07,18239,20.39,55693,62.27,interpretable

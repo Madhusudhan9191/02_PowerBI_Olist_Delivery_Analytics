@@ -1,0 +1,4 @@
+analysis_scope,repeat_definition,n_ontime,r_ontime,ontime_repeat_rate_pct,n_late,r_late,late_repeat_rate_pct,repeat_rate_gap_pp,gap_ci_lower_pp,gap_ci_upper_pp,sample_size_status
+1. Full Dataset (All Initial Delivered),Delivered Orders Only,86995,2641.0,3.04,6355,160.0,2.52,-0.52,-0.92,-0.12,interpretable
+"2. Mature Cohort (< 2017-10-01, >= 11 mo Follow-up)",All Subsequent Orders,24741,1268.0,5.13,927,35.0,3.78,-1.35,-2.61,-0.09,interpretable
+"3. Mature Cohort (< 2017-10-01, >= 11 mo Follow-up)",Delivered Orders Only,24741,1210.0,4.89,927,33.0,3.56,-1.33,-2.55,-0.11,interpretable

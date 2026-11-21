@@ -1,0 +1,173 @@
+// ============================================================================
+// DAX QUERY VIEW SCRIPT: All 63 Reconciliation Measures in ONE Table (Raw Numeric Output)
+// Version: 2.1.0 (Clean Fulfillment Boolean Filter & Raw Numeric High-Precision)
+// 
+// Instructions for Power BI Desktop:
+// 1. If fact_order_delivery does not yet show 'is_clean_fulfillment':
+//    - Quickest method (10 seconds): In Data View or Modeling tab, select 'fact_order_delivery', 
+//      click "New column", and paste:
+//      is_clean_fulfillment = fact_order_delivery[is_delivered] = TRUE() && fact_order_delivery[is_valid_delivery_date] = TRUE() && NOT(ISBLANK(fact_order_delivery[handling_days])) && fact_order_delivery[handling_days] >= 0 && NOT(ISBLANK(fact_order_delivery[transit_days])) && fact_order_delivery[transit_days] >= 0
+//    - Alternative: Click "Refresh" on Home ribbon (CSV already contains is_clean_fulfillment).
+// 2. Click "DAX Query View" (the table + calculator icon on the left bar).
+// 3. Paste this entire script into Query 1 or a New Query.
+// 4. Click "Run" (F5).
+//    - (Optional: Click "Update model with changes" if Power BI displays the prompt above the editor).
+// 5. In the Results pane below, click anywhere in the table, press Ctrl+A, then right-click -> "Copy table".
+// 6. Paste / save into: data/processed/powerbi_input/dax_all_63_export.csv
+// ============================================================================
+
+DEFINE
+    // Refactored clean fulfillment measures using explicit boolean flag
+    MEASURE _Measures[Clean Fulfillment Orders] = 
+        CALCULATE(
+            COUNTROWS(fact_order_delivery),
+            fact_order_delivery[is_clean_fulfillment] = TRUE()
+        )
+
+    MEASURE _Measures[Average Handling Days] = 
+        CALCULATE(
+            AVERAGE(fact_order_delivery[handling_days]),
+            fact_order_delivery[is_clean_fulfillment] = TRUE()
+        )
+
+    MEASURE _Measures[Average Transit Days] = 
+        CALCULATE(
+            AVERAGE(fact_order_delivery[transit_days]),
+            fact_order_delivery[is_clean_fulfillment] = TRUE()
+        )
+
+    MEASURE _Measures[Average Fulfillment Cycle Days] = 
+        CALCULATE(
+            AVERAGE(fact_order_delivery[cycle_days]),
+            fact_order_delivery[is_clean_fulfillment] = TRUE()
+        )
+
+    MEASURE _Measures[Interstate Orders Count] = 
+        CALCULATE(
+            DISTINCTCOUNT(fact_order_items[order_id]),
+            fact_order_items[is_interstate] = TRUE(),
+            fact_order_delivery[is_clean_fulfillment] = TRUE()
+        )
+
+    MEASURE _Measures[Intrastate Orders Count] = 
+        [Clean Fulfillment Orders] - [Interstate Orders Count]
+
+    MEASURE _Measures[Interstate On-Time Rate %] = 
+        DIVIDE(
+            CALCULATE(
+                DISTINCTCOUNT(fact_order_items[order_id]),
+                fact_order_items[is_interstate] = TRUE(),
+                fact_order_delivery[is_on_time] = TRUE(),
+                fact_order_delivery[is_clean_fulfillment] = TRUE()
+            ),
+            [Interstate Orders Count],
+            BLANK()
+        )
+
+    MEASURE _Measures[Intrastate On-Time Rate %] = 
+        DIVIDE(
+            CALCULATE([On-Time Orders], fact_order_delivery[is_clean_fulfillment] = TRUE()) -
+            CALCULATE(
+                DISTINCTCOUNT(fact_order_items[order_id]),
+                fact_order_items[is_interstate] = TRUE(),
+                fact_order_delivery[is_on_time] = TRUE(),
+                fact_order_delivery[is_clean_fulfillment] = TRUE()
+            ),
+            [Intrastate Orders Count],
+            BLANK()
+        )
+
+    MEASURE _Measures[Late Dispatch Rate %] = 
+        VAR LateDispatchItems = 
+            CALCULATE(
+                COUNTROWS(fact_order_items),
+                fact_order_items[is_late_dispatch] = TRUE(),
+                fact_order_delivery[is_clean_fulfillment] = TRUE()
+            )
+        VAR TotalEligibleItems = 
+            CALCULATE(
+                COUNTROWS(fact_order_items),
+                fact_order_delivery[is_clean_fulfillment] = TRUE()
+            )
+        RETURN
+            DIVIDE(LateDispatchItems, TotalEligibleItems, BLANK())
+
+EVALUATE
+UNION(
+    // 01 Volume and Spend (Rows 01-09)
+    ROW("Index", "01", "Measure_Name", "Total Orders", "Value", 1.0 * [Total Orders]),
+    ROW("Index", "02", "Measure_Name", "Delivered Orders", "Value", 1.0 * [Delivered Orders]),
+    ROW("Index", "03", "Measure_Name", "Valid Delivered Orders", "Value", 1.0 * [Valid Delivered Orders]),
+    ROW("Index", "04", "Measure_Name", "Gross Item Revenue", "Value", 1.0 * [Gross Item Revenue]),
+    ROW("Index", "05", "Measure_Name", "Total Freight Billed", "Value", 1.0 * [Total Freight Billed]),
+    ROW("Index", "06", "Measure_Name", "Total Customer Spend", "Value", 1.0 * [Total Customer Spend]),
+    ROW("Index", "07", "Measure_Name", "Captured Payment Value", "Value", 1.0 * [Captured Payment Value]),
+    ROW("Index", "08", "Measure_Name", "Total Unique Customers", "Value", 1.0 * [Total Unique Customers]),
+    ROW("Index", "09", "Measure_Name", "Total Active Sellers", "Value", 1.0 * [Total Active Sellers]),
+
+    // 02 Delivery SLA (Rows 10-17)
+    ROW("Index", "10", "Measure_Name", "On-Time Orders", "Value", 1.0 * [On-Time Orders]),
+    ROW("Index", "11", "Measure_Name", "Late Orders", "Value", 1.0 * [Late Orders]),
+    ROW("Index", "12", "Measure_Name", "On-Time Delivery Rate %", "Value", 1.0 * [On-Time Delivery Rate %]),
+    ROW("Index", "13", "Measure_Name", "Late Delivery Rate %", "Value", 1.0 * [Late Delivery Rate %]),
+    ROW("Index", "14", "Measure_Name", "Average Delay Days (Late Orders)", "Value", 1.0 * [Average Delay Days (Late Orders)]),
+    ROW("Index", "15", "Measure_Name", "Average Promised Lead Time Days", "Value", 1.0 * [Average Promised Lead Time Days]),
+    ROW("Index", "16", "Measure_Name", "Average Actual Cycle Days", "Value", 1.0 * [Average Actual Cycle Days]),
+    ROW("Index", "17", "Measure_Name", "ETA Safety Buffer Days", "Value", 1.0 * [ETA Safety Buffer Days]),
+
+    // 03 Review Satisfaction (Rows 18-35)
+    ROW("Index", "18", "Measure_Name", "Total Reviewed Orders", "Value", 1.0 * [Total Reviewed Orders]),
+    ROW("Index", "19", "Measure_Name", "Delivered Reviewed Orders", "Value", 1.0 * [Delivered Reviewed Orders]),
+    ROW("Index", "20", "Measure_Name", "Average Review Score", "Value", 1.0 * [Average Review Score]),
+    ROW("Index", "21", "Measure_Name", "Average Review Score (Delivered)", "Value", 1.0 * [Average Review Score (Delivered)]),
+    ROW("Index", "22", "Measure_Name", "Average Review Score (On-Time)", "Value", 1.0 * [Average Review Score (On-Time)]),
+    ROW("Index", "23", "Measure_Name", "Average Review Score (Late)", "Value", 1.0 * [Average Review Score (Late)]),
+    ROW("Index", "24", "Measure_Name", "Review Score Gap (Late vs On-Time)", "Value", 1.0 * [Review Score Gap (Late vs On-Time)]),
+    ROW("Index", "25", "Measure_Name", "Negative Reviews Count (1-2 Star)", "Value", 1.0 * [Negative Reviews Count (1-2 Star)]),
+    ROW("Index", "26", "Measure_Name", "Negative Review Share %", "Value", 1.0 * [Negative Review Share %]),
+    ROW("Index", "27", "Measure_Name", "Negative Review Share % (Late)", "Value", 1.0 * [Negative Review Share % (Late)]),
+    ROW("Index", "28", "Measure_Name", "Negative Review Share % (On-Time)", "Value", 1.0 * [Negative Review Share % (On-Time)]),
+    ROW("Index", "29", "Measure_Name", "5-Star Reviews Count", "Value", 1.0 * [5-Star Reviews Count]),
+    ROW("Index", "30", "Measure_Name", "5-Star Review Share % (Late)", "Value", 1.0 * [5-Star Review Share % (Late)]),
+    ROW("Index", "31", "Measure_Name", "5-Star Review Share % (On-Time)", "Value", 1.0 * [5-Star Review Share % (On-Time)]),
+    ROW("Index", "32", "Measure_Name", "Pre-Delivery Late Reviews Count", "Value", 1.0 * [Pre-Delivery Late Reviews Count]),
+    ROW("Index", "33", "Measure_Name", "Pre-Delivery Late Review Share %", "Value", 1.0 * [Pre-Delivery Late Review Share %]),
+    ROW("Index", "34", "Measure_Name", "Avg Review Score (Pre-Delivery Late)", "Value", 1.0 * [Avg Review Score (Pre-Delivery Late)]),
+    ROW("Index", "35", "Measure_Name", "Avg Review Score (Post-Delivery Late)", "Value", 1.0 * [Avg Review Score (Post-Delivery Late)]),
+
+    // 04 Fulfillment Bottlenecks (Rows 36-45)
+    ROW("Index", "36", "Measure_Name", "Clean Fulfillment Orders", "Value", 1.0 * [Clean Fulfillment Orders]),
+    ROW("Index", "37", "Measure_Name", "Average Handling Days", "Value", 1.0 * [Average Handling Days]),
+    ROW("Index", "38", "Measure_Name", "Average Transit Days", "Value", 1.0 * [Average Transit Days]),
+    ROW("Index", "39", "Measure_Name", "Average Fulfillment Cycle Days", "Value", 1.0 * [Average Fulfillment Cycle Days]),
+    ROW("Index", "40", "Measure_Name", "Handling Share of Fulfillment %", "Value", 1.0 * [Handling Share of Fulfillment %]),
+    ROW("Index", "41", "Measure_Name", "Transit Share of Fulfillment %", "Value", 1.0 * [Transit Share of Fulfillment %]),
+    ROW("Index", "42", "Measure_Name", "Interstate Orders Count", "Value", 1.0 * [Interstate Orders Count]),
+    ROW("Index", "43", "Measure_Name", "Intrastate Orders Count", "Value", 1.0 * [Intrastate Orders Count]),
+    ROW("Index", "44", "Measure_Name", "Interstate On-Time Rate %", "Value", 1.0 * [Interstate On-Time Rate %]),
+    ROW("Index", "45", "Measure_Name", "Intrastate On-Time Rate %", "Value", 1.0 * [Intrastate On-Time Rate %]),
+
+    // 05 Regional Mix-Adjusted Gaps (Rows 46-48)
+    ROW("Index", "46", "Measure_Name", "Mix-Adjusted Performance Gap pp (RJ)", "Value", 1.0 * CALCULATE([Mix-Adjusted Performance Gap pp], fact_order_delivery[order_customer_state] = "RJ")),
+    ROW("Index", "47", "Measure_Name", "Mix-Adjusted Performance Gap pp (SP)", "Value", 1.0 * CALCULATE([Mix-Adjusted Performance Gap pp], fact_order_delivery[order_customer_state] = "SP")),
+    ROW("Index", "48", "Measure_Name", "Mix-Adjusted Performance Gap pp (AL)", "Value", 1.0 * CALCULATE([Mix-Adjusted Performance Gap pp], fact_order_delivery[order_customer_state] = "AL")),
+
+    // 05 Seller Tiers Late Dispatch Rates (Rows 49-52)
+    ROW("Index", "49", "Measure_Name", "Late Dispatch Rate % (Tier 1)", "Value", 1.0 * CALCULATE([Late Dispatch Rate %], dim_seller[seller_tier] = "Tier 1: High Volume (500+ orders)")),
+    ROW("Index", "50", "Measure_Name", "Late Dispatch Rate % (Tier 2)", "Value", 1.0 * CALCULATE([Late Dispatch Rate %], dim_seller[seller_tier] = "Tier 2: Mid Volume (100-499 orders)")),
+    ROW("Index", "51", "Measure_Name", "Late Dispatch Rate % (Tier 3)", "Value", 1.0 * CALCULATE([Late Dispatch Rate %], dim_seller[seller_tier] = "Tier 3: Low Volume (30-99 orders)")),
+    ROW("Index", "52", "Measure_Name", "Late Dispatch Rate % (Tier 4)", "Value", 1.0 * CALCULATE([Late Dispatch Rate %], dim_seller[seller_tier] = "Tier 4: Micro Volume (<30 orders)")),
+
+    // 07 Retention and Cohorts (Rows 53-63)
+    ROW("Index", "53", "Measure_Name", "Total Repeat Customers", "Value", 1.0 * [Total Repeat Customers]),
+    ROW("Index", "54", "Measure_Name", "Repeat Customer Rate %", "Value", 1.0 * [Repeat Customer Rate %]),
+    ROW("Index", "55", "Measure_Name", "Delivered Repeat Rate % (On-Time)", "Value", 1.0 * [Delivered Repeat Rate % (On-Time First Order)]),
+    ROW("Index", "56", "Measure_Name", "Delivered Repeat Rate % (Late)", "Value", 1.0 * [Delivered Repeat Rate % (Late First Order)]),
+    ROW("Index", "57", "Measure_Name", "Delivered Repeat Rate Gap pp", "Value", 1.0 * [Delivered Repeat Rate Gap pp]),
+    ROW("Index", "58", "Measure_Name", "Mature Repeat Rate % (On-Time)", "Value", 1.0 * [Mature Repeat Rate % (On-Time First Order)]),
+    ROW("Index", "59", "Measure_Name", "Mature Repeat Rate % (Late)", "Value", 1.0 * [Mature Repeat Rate % (Late First Order)]),
+    ROW("Index", "60", "Measure_Name", "Mature Repeat Rate Gap pp", "Value", 1.0 * [Mature Repeat Rate Gap pp]),
+    ROW("Index", "61", "Measure_Name", "Mature Delivered Repeat Rate % (On-Time)", "Value", 1.0 * [Mature Delivered Repeat Rate % (On-Time First Order)]),
+    ROW("Index", "62", "Measure_Name", "Mature Delivered Repeat Rate % (Late)", "Value", 1.0 * [Mature Delivered Repeat Rate % (Late First Order)]),
+    ROW("Index", "63", "Measure_Name", "Mature Delivered Repeat Rate Gap pp", "Value", 1.0 * [Mature Delivered Repeat Rate Gap pp])
+)

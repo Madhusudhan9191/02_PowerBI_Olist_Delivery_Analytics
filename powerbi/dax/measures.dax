@@ -1,0 +1,539 @@
+// ============================================================================
+// DAX MEASURE LIBRARY: Olist E-commerce Delivery Performance & Customer Satisfaction
+// Version: 2.0.0
+// Standard: Strict sample-size governance, date-level SLA, dynamic cohort retention,
+//           and mix-adjusted benchmarking. All measures fully dynamic (zero hardcoded constants).
+// Organized into 8 Logical Display Folders.
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// FOLDER: 01_Volume_and_Spend
+// ----------------------------------------------------------------------------
+
+Total Orders = 
+COUNTROWS(fact_order_delivery)
+
+Delivered Orders = 
+CALCULATE(
+    COUNTROWS(fact_order_delivery),
+    fact_order_delivery[is_delivered] = TRUE()
+)
+
+Valid Delivered Orders = 
+CALCULATE(
+    COUNTROWS(fact_order_delivery),
+    fact_order_delivery[is_delivered] = TRUE(),
+    fact_order_delivery[is_valid_delivery_date] = TRUE()
+)
+
+Total Order Items = 
+COUNTROWS(fact_order_items)
+
+Gross Item Revenue = 
+SUM(fact_order_items[price])
+
+Total Freight Billed = 
+SUM(fact_order_items[freight_value])
+
+Total Customer Spend = 
+SUM(fact_order_items[total_item_spend])
+
+Captured Payment Value = 
+SUM(fact_order_payments[payment_value])
+
+Average Item Price = 
+AVERAGE(fact_order_items[price])
+
+Average Freight per Item = 
+AVERAGE(fact_order_items[freight_value])
+
+Freight to Price Ratio % = 
+DIVIDE([Total Freight Billed], [Gross Item Revenue], BLANK())
+
+Total Unique Customers = 
+// Responsive to slicers across date, state, and categories
+DISTINCTCOUNT(fact_order_delivery[customer_unique_id])
+
+Total Active Sellers = 
+// Responsive to slicers across date, state, and categories
+DISTINCTCOUNT(fact_order_items[seller_id])
+
+
+// ----------------------------------------------------------------------------
+// FOLDER: 02_Delivery_SLA
+// ----------------------------------------------------------------------------
+
+On-Time Orders = 
+CALCULATE(
+    COUNTROWS(fact_order_delivery),
+    fact_order_delivery[is_on_time] = TRUE()
+)
+
+Late Orders = 
+CALCULATE(
+    COUNTROWS(fact_order_delivery),
+    fact_order_delivery[is_late] = TRUE()
+)
+
+On-Time Delivery Rate % = 
+DIVIDE([On-Time Orders], [Valid Delivered Orders], BLANK())
+
+Late Delivery Rate % = 
+DIVIDE([Late Orders], [Valid Delivered Orders], BLANK())
+
+Average Delay Days (Late Orders) = 
+CALCULATE(
+    AVERAGE(fact_order_delivery[delay_days]),
+    fact_order_delivery[is_late] = TRUE()
+)
+
+Average Estimate Variance Days = 
+CALCULATE(
+    AVERAGE(fact_order_delivery[estimate_variance_days]),
+    fact_order_delivery[is_delivered] = TRUE(),
+    fact_order_delivery[is_valid_delivery_date] = TRUE()
+)
+
+Average Promised Lead Time Days = 
+CALCULATE(
+    AVERAGE(fact_order_delivery[promised_lead_time_days]),
+    fact_order_delivery[is_delivered] = TRUE(),
+    fact_order_delivery[is_valid_delivery_date] = TRUE()
+)
+
+Average Actual Cycle Days = 
+CALCULATE(
+    AVERAGE(fact_order_delivery[cycle_days]),
+    fact_order_delivery[is_delivered] = TRUE(),
+    fact_order_delivery[is_valid_delivery_date] = TRUE()
+)
+
+ETA Safety Buffer Days = 
+[Average Promised Lead Time Days] - [Average Actual Cycle Days]
+
+
+// ----------------------------------------------------------------------------
+// FOLDER: 03_Review_Satisfaction
+// ----------------------------------------------------------------------------
+
+Total Reviewed Orders = 
+CALCULATE(
+    COUNTROWS(fact_order_delivery),
+    fact_order_delivery[has_review] = TRUE()
+)
+
+Delivered Reviewed Orders = 
+CALCULATE(
+    COUNTROWS(fact_order_delivery),
+    fact_order_delivery[is_delivered] = TRUE(),
+    fact_order_delivery[is_valid_delivery_date] = TRUE(),
+    fact_order_delivery[has_review] = TRUE()
+)
+
+Average Review Score = 
+CALCULATE(
+    AVERAGE(fact_order_delivery[review_score]),
+    fact_order_delivery[has_review] = TRUE()
+)
+
+Average Review Score (Delivered) = 
+CALCULATE(
+    AVERAGE(fact_order_delivery[review_score]),
+    fact_order_delivery[is_delivered] = TRUE(),
+    fact_order_delivery[is_valid_delivery_date] = TRUE(),
+    fact_order_delivery[has_review] = TRUE()
+)
+
+Average Review Score (On-Time) = 
+CALCULATE(
+    AVERAGE(fact_order_delivery[review_score]),
+    fact_order_delivery[is_on_time] = TRUE(),
+    fact_order_delivery[has_review] = TRUE()
+)
+
+Average Review Score (Late) = 
+CALCULATE(
+    AVERAGE(fact_order_delivery[review_score]),
+    fact_order_delivery[is_late] = TRUE(),
+    fact_order_delivery[has_review] = TRUE()
+)
+
+Review Score Gap (Late vs On-Time) = 
+[Average Review Score (Late)] - [Average Review Score (On-Time)]
+
+Negative Reviews Count (1-2 Star) = 
+CALCULATE(
+    COUNTROWS(fact_order_delivery),
+    fact_order_delivery[is_delivered] = TRUE(),
+    fact_order_delivery[is_valid_delivery_date] = TRUE(),
+    fact_order_delivery[review_score] IN {1, 2},
+    fact_order_delivery[has_review] = TRUE()
+)
+
+Negative Review Share % = 
+DIVIDE([Negative Reviews Count (1-2 Star)], [Delivered Reviewed Orders], BLANK())
+
+Negative Review Share % (Late) = 
+DIVIDE(
+    CALCULATE([Negative Reviews Count (1-2 Star)], fact_order_delivery[is_late] = TRUE()),
+    CALCULATE([Delivered Reviewed Orders], fact_order_delivery[is_late] = TRUE()),
+    BLANK()
+)
+
+Negative Review Share % (On-Time) = 
+DIVIDE(
+    CALCULATE([Negative Reviews Count (1-2 Star)], fact_order_delivery[is_on_time] = TRUE()),
+    CALCULATE([Delivered Reviewed Orders], fact_order_delivery[is_on_time] = TRUE()),
+    BLANK()
+)
+
+5-Star Reviews Count = 
+CALCULATE(
+    COUNTROWS(fact_order_delivery),
+    fact_order_delivery[is_delivered] = TRUE(),
+    fact_order_delivery[is_valid_delivery_date] = TRUE(),
+    fact_order_delivery[review_score] = 5,
+    fact_order_delivery[has_review] = TRUE()
+)
+
+5-Star Review Share % (Late) = 
+DIVIDE(
+    CALCULATE([5-Star Reviews Count], fact_order_delivery[is_late] = TRUE()),
+    CALCULATE([Delivered Reviewed Orders], fact_order_delivery[is_late] = TRUE()),
+    BLANK()
+)
+
+5-Star Review Share % (On-Time) = 
+DIVIDE(
+    CALCULATE([5-Star Reviews Count], fact_order_delivery[is_on_time] = TRUE()),
+    CALCULATE([Delivered Reviewed Orders], fact_order_delivery[is_on_time] = TRUE()),
+    BLANK()
+)
+
+Pre-Delivery Late Reviews Count = 
+CALCULATE(
+    COUNTROWS(fact_order_delivery),
+    fact_order_delivery[is_late] = TRUE(),
+    fact_order_delivery[review_created_before_delivery] = TRUE(),
+    fact_order_delivery[has_review] = TRUE()
+)
+
+Pre-Delivery Late Review Share % = 
+DIVIDE(
+    [Pre-Delivery Late Reviews Count],
+    CALCULATE([Delivered Reviewed Orders], fact_order_delivery[is_late] = TRUE()),
+    BLANK()
+)
+
+Avg Review Score (Pre-Delivery Late) = 
+CALCULATE(
+    AVERAGE(fact_order_delivery[review_score]),
+    fact_order_delivery[is_late] = TRUE(),
+    fact_order_delivery[review_created_before_delivery] = TRUE(),
+    fact_order_delivery[has_review] = TRUE()
+)
+
+Avg Review Score (Post-Delivery Late) = 
+CALCULATE(
+    AVERAGE(fact_order_delivery[review_score]),
+    fact_order_delivery[is_late] = TRUE(),
+    fact_order_delivery[review_created_before_delivery] = FALSE(),
+    fact_order_delivery[has_review] = TRUE()
+)
+
+Review Gap (Pre vs Post Delivery Late) = 
+[Avg Review Score (Pre-Delivery Late)] - [Avg Review Score (Post-Delivery Late)]
+
+
+// ----------------------------------------------------------------------------
+// FOLDER: 04_Fulfillment_Bottlenecks
+// ----------------------------------------------------------------------------
+
+Clean Fulfillment Orders = 
+CALCULATE(
+    COUNTROWS(fact_order_delivery),
+    fact_order_delivery[is_clean_fulfillment] = TRUE()
+)
+
+Average Handling Days = 
+// Evaluated on clean fulfillment population (N = 95,082)
+CALCULATE(
+    AVERAGE(fact_order_delivery[handling_days]),
+    fact_order_delivery[is_clean_fulfillment] = TRUE()
+)
+
+Average Transit Days = 
+// Evaluated on clean fulfillment population (N = 95,082)
+CALCULATE(
+    AVERAGE(fact_order_delivery[transit_days]),
+    fact_order_delivery[is_clean_fulfillment] = TRUE()
+)
+
+Average Fulfillment Cycle Days = 
+// Evaluated on clean fulfillment population (N = 95,082)
+// Measures total duration from order purchase to customer delivery (12.62 days).
+// Includes payment approval duration (~0.40 days / 9.6 hours). Operational handling + transit is 12.22 days.
+CALCULATE(
+    AVERAGE(fact_order_delivery[cycle_days]),
+    fact_order_delivery[is_clean_fulfillment] = TRUE()
+)
+
+Handling Share of Fulfillment % = 
+// Evaluated against operational fulfillment duration (Average Handling Days + Average Transit Days = 12.22 days)
+DIVIDE([Average Handling Days], [Average Handling Days] + [Average Transit Days], BLANK())
+
+Transit Share of Fulfillment % = 
+// Evaluated against operational fulfillment duration (Average Handling Days + Average Transit Days = 12.22 days)
+DIVIDE([Average Transit Days], [Average Handling Days] + [Average Transit Days], BLANK())
+
+Interstate Orders Count = 
+CALCULATE(
+    DISTINCTCOUNT(fact_order_items[order_id]),
+    fact_order_items[is_interstate] = TRUE(),
+    fact_order_delivery[is_clean_fulfillment] = TRUE()
+)
+
+Intrastate Orders Count = 
+[Clean Fulfillment Orders] - [Interstate Orders Count]
+
+Interstate On-Time Rate % = 
+DIVIDE(
+    CALCULATE(
+        DISTINCTCOUNT(fact_order_items[order_id]),
+        fact_order_items[is_interstate] = TRUE(),
+        fact_order_delivery[is_on_time] = TRUE(),
+        fact_order_delivery[is_clean_fulfillment] = TRUE()
+    ),
+    [Interstate Orders Count],
+    BLANK()
+)
+
+Intrastate On-Time Rate % = 
+DIVIDE(
+    CALCULATE([On-Time Orders], fact_order_delivery[is_clean_fulfillment] = TRUE()) -
+    CALCULATE(
+        DISTINCTCOUNT(fact_order_items[order_id]),
+        fact_order_items[is_interstate] = TRUE(),
+        fact_order_delivery[is_on_time] = TRUE(),
+        fact_order_delivery[is_clean_fulfillment] = TRUE()
+    ),
+    [Intrastate Orders Count],
+    BLANK()
+)
+
+
+// ----------------------------------------------------------------------------
+// FOLDER: 05_Regional_and_Seller
+// ----------------------------------------------------------------------------
+
+Global Benchmark On-Time Rate % = 
+CALCULATE(
+    [On-Time Delivery Rate %],
+    ALL(fact_order_delivery),
+    ALL(dim_geography)
+)
+
+Expected On-Time Rate % = 
+// Mix-adjusted expected on-time rate based on order distance band distribution (Grain: order)
+VAR CurrentStateOrders = [Valid Delivered Orders]
+RETURN
+IF(
+    CurrentStateOrders > 0,
+    SUMX(
+        VALUES(fact_order_delivery[order_distance_band]),
+        VAR BandOrders = CALCULATE([Valid Delivered Orders])
+        VAR BandWeight = DIVIDE(BandOrders, CurrentStateOrders)
+        VAR GlobalBandRate = CALCULATE([On-Time Delivery Rate %], ALL(fact_order_delivery[order_customer_state]))
+        RETURN BandWeight * GlobalBandRate
+    ),
+    BLANK()
+)
+
+Mix-Adjusted Performance Gap pp = 
+([On-Time Delivery Rate %] - [Expected On-Time Rate %]) * 100
+
+Late Dispatch Rate % = 
+// Evaluated on clean fulfillment orders (is_clean_fulfillment = TRUE)
+VAR LateDispatchItems = 
+    CALCULATE(
+        COUNTROWS(fact_order_items),
+        fact_order_items[is_late_dispatch] = TRUE(),
+        fact_order_delivery[is_clean_fulfillment] = TRUE()
+    )
+VAR TotalEligibleItems = 
+    CALCULATE(
+        COUNTROWS(fact_order_items),
+        fact_order_delivery[is_clean_fulfillment] = TRUE()
+    )
+RETURN
+    DIVIDE(LateDispatchItems, TotalEligibleItems, BLANK())
+
+
+// ----------------------------------------------------------------------------
+// FOLDER: 06_Freight_Economics
+// ----------------------------------------------------------------------------
+
+Average Route Distance km = 
+AVERAGE(fact_order_items[route_distance_km])
+
+Total Billed Weight kg = 
+SUMX(
+    fact_order_items,
+    RELATED(dim_product[product_weight_g]) / 1000.0
+)
+
+Average Freight per kg = 
+AVERAGE(fact_order_items[freight_per_kg])
+
+
+// ----------------------------------------------------------------------------
+// FOLDER: 07_Retention_and_Cohort
+// ----------------------------------------------------------------------------
+
+Total Repeat Customers = 
+// Evaluated dynamically over persistent customer entities on the fact table
+CALCULATE(
+    DISTINCTCOUNT(fact_order_delivery[customer_unique_id]),
+    dim_customer[is_repeat_customer] = TRUE()
+)
+
+Repeat Customer Rate % = 
+DIVIDE([Total Repeat Customers], [Total Unique Customers], BLANK())
+
+Delivered Repeat Rate % (On-Time First Order) = 
+// Fully dynamic DAX: customers whose first delivered order was on-time who placed >= 2 delivered orders
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[has_delivered_order] = TRUE(),
+        dim_customer[first_order_on_time] = TRUE(),
+        dim_customer[has_repeat_delivered_order] = TRUE()
+    ),
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[has_delivered_order] = TRUE(),
+        dim_customer[first_order_on_time] = TRUE()
+    ),
+    BLANK()
+)
+
+Delivered Repeat Rate % (Late First Order) = 
+// Fully dynamic DAX: customers whose first delivered order was late who placed >= 2 delivered orders
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[has_delivered_order] = TRUE(),
+        dim_customer[first_order_late] = TRUE(),
+        dim_customer[has_repeat_delivered_order] = TRUE()
+    ),
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[has_delivered_order] = TRUE(),
+        dim_customer[first_order_late] = TRUE()
+    ),
+    BLANK()
+)
+
+Delivered Repeat Rate Gap pp = 
+([Delivered Repeat Rate % (Late First Order)] - [Delivered Repeat Rate % (On-Time First Order)]) * 100
+
+Mature Repeat Rate % (On-Time First Order) = 
+// Mature cohort (< 2017-10-01, >= 11 months follow-up): repeat across all subsequent orders
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[is_mature_cohort] = TRUE(),
+        dim_customer[first_order_on_time] = TRUE(),
+        dim_customer[has_repeat_all_order] = TRUE()
+    ),
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[is_mature_cohort] = TRUE(),
+        dim_customer[first_order_on_time] = TRUE()
+    ),
+    BLANK()
+)
+
+Mature Repeat Rate % (Late First Order) = 
+// Mature cohort (< 2017-10-01, >= 11 months follow-up): repeat across all subsequent orders
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[is_mature_cohort] = TRUE(),
+        dim_customer[first_order_late] = TRUE(),
+        dim_customer[has_repeat_all_order] = TRUE()
+    ),
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[is_mature_cohort] = TRUE(),
+        dim_customer[first_order_late] = TRUE()
+    ),
+    BLANK()
+)
+
+Mature Repeat Rate Gap pp = 
+([Mature Repeat Rate % (Late First Order)] - [Mature Repeat Rate % (On-Time First Order)]) * 100
+
+Mature Delivered Repeat Rate % (On-Time First Order) = 
+// Mature cohort (< 2017-10-01): repeat across subsequent delivered orders only
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[is_mature_cohort] = TRUE(),
+        dim_customer[first_order_on_time] = TRUE(),
+        dim_customer[has_repeat_delivered_order] = TRUE()
+    ),
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[is_mature_cohort] = TRUE(),
+        dim_customer[first_order_on_time] = TRUE()
+    ),
+    BLANK()
+)
+
+Mature Delivered Repeat Rate % (Late First Order) = 
+// Mature cohort (< 2017-10-01): repeat across subsequent delivered orders only
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[is_mature_cohort] = TRUE(),
+        dim_customer[first_order_late] = TRUE(),
+        dim_customer[has_repeat_delivered_order] = TRUE()
+    ),
+    CALCULATE(
+        COUNTROWS(dim_customer),
+        dim_customer[is_mature_cohort] = TRUE(),
+        dim_customer[first_order_late] = TRUE()
+    ),
+    BLANK()
+)
+
+Mature Delivered Repeat Rate Gap pp = 
+([Mature Delivered Repeat Rate % (Late First Order)] - [Mature Delivered Repeat Rate % (On-Time First Order)]) * 100
+
+
+// ----------------------------------------------------------------------------
+// FOLDER: 08_Sample_Size_Governance
+// ----------------------------------------------------------------------------
+
+Sample Size Status = 
+VAR N = [Valid Delivered Orders]
+RETURN
+SWITCH(
+    TRUE(),
+    ISBLANK(N) || N = 0, BLANK(),
+    N < 30, "suppress",
+    N < 100, "exploratory",
+    "interpretable"
+)
+
+Sample Size Label = 
+VAR N = [Valid Delivered Orders]
+RETURN
+SWITCH(
+    TRUE(),
+    ISBLANK(N) || N = 0, "",
+    N < 30, "⚠️ Suppress (N < 30)",
+    N < 100, "ℹ️ Exploratory (30-99)",
+    "✅ Interpretable (N ≥ 100)"
+)

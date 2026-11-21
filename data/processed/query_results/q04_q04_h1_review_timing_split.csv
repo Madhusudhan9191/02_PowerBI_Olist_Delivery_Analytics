@@ -1,0 +1,5 @@
+delivery_timeliness,review_timing_cohort,reviewed_orders_n,cohort_share_pct,avg_review_score,pct_1_2_star,pct_5_star,sample_size_status
+Late Delivery,Reviewed Before Delivery,4751,74.46,1.84,75.23,9.49,interpretable
+Late Delivery,Reviewed On/After Delivery,1630,25.54,3.526,25.09,37.06,interpretable
+On-Time Delivery,Reviewed Before Delivery,225,0.25,3.938,17.33,53.78,interpretable
+On-Time Delivery,Reviewed On/After Delivery,89218,99.75,4.291,9.25,62.29,interpretable

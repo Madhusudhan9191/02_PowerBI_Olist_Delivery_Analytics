@@ -1,0 +1,2 @@
+total_orders,delivered_orders_with_date,on_time_delivered_orders,late_delivered_orders,on_time_delivery_rate_pct,late_delivery_rate_pct,avg_delay_days_late_orders,gross_item_revenue_brl,total_freight_billed_brl,total_customer_item_spend_brl,overall_avg_review_score,sample_size_n,sample_size_status
+99441,96470,89936,6534,93.23,6.77,10.49,13591643.7,2251909.54,15843553.24,4.017,99441,interpretable
